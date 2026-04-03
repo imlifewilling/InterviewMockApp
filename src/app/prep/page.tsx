@@ -50,6 +50,13 @@ export default function PrepPage() {
     };
 
     const handleStartSession = () => {
+        // Unlock speech synthesis with actual text to prevent queue from hanging
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance("Connecting");
+            utterance.volume = 0.01; // nearly silent, but Chrome requires > 0 to process naturally
+            window.speechSynthesis.speak(utterance);
+        }
         dispatch({ type: "SET_QUESTION_INDEX", payload: 0 });
         dispatch({ type: "SET_SESSION_PHASE", payload: "GREETING" });
         router.push("/session");

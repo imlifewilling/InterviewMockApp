@@ -70,7 +70,7 @@ export default function ResultsPage() {
 
             {/* Score Summary Card */}
             <div
-                className="glass-card"
+                className="glass-card animate-fade-in-up"
                 style={{
                     padding: "32px",
                     marginBottom: "28px",
@@ -125,14 +125,14 @@ export default function ResultsPage() {
                 Question-by-Question Breakdown
             </h2>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="stagger" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {state.questions.map((q, i) => {
                     const ev = state.evaluations[q.id];
                     if (!ev) return null;
                     const isOpen = expandedQuestion === q.id;
 
                     return (
-                        <div key={q.id}>
+                        <div key={q.id} className="animate-fade-in-up">
                             <QuestionCard
                                 question={q}
                                 index={i}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useCallback, useState } from "react";
+import React, { useEffect, useCallback, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useInterview } from "@/context/InterviewContext";
 import { useCamera } from "@/hooks/useCamera";
@@ -11,7 +11,7 @@ import { LoadingPulse } from "@/components/LoadingPulse";
 export default function SessionPage() {
     const router = useRouter();
     const { state, dispatch } = useInterview();
-    const { startCamera, stopCamera } = useCamera();
+    const { stream, isRecording, startRecording, stopRecording, startCamera, stopCamera, error } = useCamera();
     const [evaluating, setEvaluating] = useState(false);
     const [currentRecording, setCurrentRecording] = useState<{ blob: Blob; duration: number; transcript: string; } | null>(null);
 
@@ -31,8 +31,19 @@ export default function SessionPage() {
     // Start camera
     useEffect(() => {
         startCamera();
-        return () => { stopCamera(); window.speechSynthesis.cancel(); };
+        return () => { 
+            stopCamera(); 
+        };
     }, [startCamera, stopCamera]);
+
+    // Cancel speech only on unmount safely
+    useEffect(() => {
+        return () => {
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, []);
 
     // Timer logic
     useEffect(() => {
@@ -57,23 +68,39 @@ export default function SessionPage() {
         setAgentSpeaking(true);
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.rate = 1.05;
+        // The utterance doesn't seem to fire onend on Chrome unless the onboundary or something interrupts
+        // it, or if volume > 0, so make sure not muted and also attach an onresume
+        utterance.volume = 1;
         
         let hasEnded = false;
         
-        utterance.onend = () => {
+        // Safety timeout to prevent the app from hanging if speech synthesis fails silently
+        const estimatedDurationMs = Math.max(4000, (text.length / 15) * 1000 + 4000); 
+        const timeoutId = setTimeout(() => {
             if (!hasEnded) {
+                console.warn("Speech synthesis timeout bypass triggered");
+                hasEnded = true;
+                setAgentSpeaking(false);
+                if (onEnd) onEnd();
+            }
+        }, estimatedDurationMs);
+
+        const finish = () => {
+            if (!hasEnded) {
+                clearTimeout(timeoutId);
                 hasEnded = true;
                 setAgentSpeaking(false);
                 if (onEnd) onEnd();
             }
         };
-        utterance.onerror = () => {
-            if (!hasEnded) {
-                hasEnded = true;
-                setAgentSpeaking(false);
-                if (onEnd) onEnd();
-            }
-        };
+        
+        utterance.onend = finish;
+        utterance.onerror = finish;
+
+        // Prevent garbage collection bug in Chrome/Safari
+        Object.assign(window, { currentUtterance: utterance });
+        // Reset any paused state
+        window.speechSynthesis.resume();
         window.speechSynthesis.speak(utterance);
     }, []);
 
@@ -97,9 +124,17 @@ export default function SessionPage() {
         }
     }, [dispatch, router, speak, state.jobProfile]);
 
+    // Tracking for fetching greeting
+    const isFetchingGreetingReq = useRef(false);
+
     // Phase management
     useEffect(() => {
+        // Wait until camera is active to begin the conversation, prevents talking while auth prompt is open
+        if (!stream) return;
+
         if (state.sessionPhase === "GREETING") {
+            if (isFetchingGreetingReq.current) return;
+            isFetchingGreetingReq.current = true;
             const fetchGreeting = async () => {
                 try {
                     const res = await fetch("/api/agent-respond", {
@@ -124,7 +159,7 @@ export default function SessionPage() {
                  }, 500);
             }
         }
-    }, [state.sessionPhase, state.jobProfile, currentQuestion, dispatch, speak]);
+    }, [state.sessionPhase, state.jobProfile, currentQuestion, dispatch, speak, stream]);
 
     const handleRecordingComplete = (blob: Blob, duration: number, transcript: string) => {
         if (state.sessionPhase === "CANDIDATE_QA") {
@@ -258,7 +293,7 @@ export default function SessionPage() {
                 }}
             >
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button className="btn" onClick={() => { window.speechSynthesis.cancel(); router.push("/prep"); }} style={{ padding: "8px 14px", fontSize: "0.82rem" }}>
+                    <button className="btn" onClick={() => { if("speechSynthesis" in window) window.speechSynthesis.cancel(); router.push("/prep"); }} style={{ padding: "8px 14px", fontSize: "0.82rem" }}>
                         ← Back
                     </button>
                     {state.sessionPhase === "INTERVIEW" && (
@@ -295,7 +330,7 @@ export default function SessionPage() {
             </div>
 
             {/* LEFT: Context + Controls */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="animate-fade-in-up" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                 {state.sessionPhase === "GREETING" && (
                     <div className="glass-card" style={{ padding: "24px", textAlign: "center" }}>
                         <LoadingPulse message="Recruiter is reviewing your profile and greeting you..." />
@@ -398,12 +433,17 @@ export default function SessionPage() {
                  {(state.sessionPhase === "INTERVIEW" || state.sessionPhase === "CANDIDATE_QA") ? (
                     <div style={{ opacity: agentSpeaking ? 0.6 : 1, transition: "opacity 0.3s", pointerEvents: agentSpeaking ? "none" : "auto" }}>
                         <CameraRecorder
+                            stream={stream}
+                            isRecording={isRecording}
+                            onStartRecording={startRecording}
+                            onStopRecording={stopRecording}
+                            error={error}
                             questionId={state.sessionPhase === "CANDIDATE_QA" ? "qa_phase" : currentQuestion?.id || "unknown"}
                             onRecordingComplete={handleRecordingComplete}
                         />
                     </div>
                 ) : (
-                    <div style={{ borderRadius: "16px", background: "#000", aspectRatio: "16/9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div className="animate-fade-in" style={{ borderRadius: "16px", background: "#000", aspectRatio: "16/9", display: "flex", alignItems: "center", justifyContent: "center" }}>
                          <div className="record-pulse" style={{ background: "rgba(255,255,255,0.2)", width: "20px", height: "20px" }} />
                     </div>
                 )}

@@ -3,13 +3,25 @@ import React, { useEffect, useRef, useState } from "react";
 import { useCamera } from "@/hooks/useCamera";
 
 interface CameraRecorderProps {
+    stream: MediaStream | null;
+    isRecording: boolean;
+    onStartRecording: () => void;
+    onStopRecording: () => Promise<Blob>;
+    error: string | null;
     questionId: string;
     onRecordingComplete: (blob: Blob, durationSeconds: number, transcript: string) => void;
 }
 
-export function CameraRecorder({ questionId, onRecordingComplete }: CameraRecorderProps) {
+export function CameraRecorder({ 
+    stream, 
+    isRecording, 
+    onStartRecording, 
+    onStopRecording, 
+    error, 
+    questionId, 
+    onRecordingComplete 
+}: CameraRecorderProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
-    const { stream, isRecording, startRecording, stopRecording, error } = useCamera();
     const startTimeRef = useRef<number | null>(null);
     const recognitionRef = useRef<any>(null);
     const [transcript, setTranscript] = useState("");
@@ -61,14 +73,14 @@ export function CameraRecorder({ questionId, onRecordingComplete }: CameraRecord
             recognitionRef.current = recognition;
         }
 
-        await startRecording();
+        await onStartRecording();
     };
 
     const handleStop = async () => {
         if (recognitionRef.current) {
             recognitionRef.current.stop();
         }
-        const blob = await stopRecording();
+        const blob = await onStopRecording();
         if (!blob) return;
         const duration = startTimeRef.current
             ? Math.round((Date.now() - startTimeRef.current) / 1000)
