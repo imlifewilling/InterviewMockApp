@@ -59,7 +59,7 @@ export default function HomePage() {
                                 width: "52px",
                                 height: "52px",
                                 borderRadius: "14px",
-                                background: "var(--gradient-primary)",
+                                background: "var(--gradient-accent)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -73,7 +73,7 @@ export default function HomePage() {
                             style={{
                                 fontSize: "1.7rem",
                                 fontWeight: "800",
-                                background: "var(--gradient-primary)",
+                                background: "var(--gradient-accent)",
                                 WebkitBackgroundClip: "text",
                                 WebkitTextFillColor: "transparent",
                             }}
@@ -95,7 +95,7 @@ export default function HomePage() {
                         <span
                             style={{
                                 display: "block",
-                                background: "var(--gradient-primary)",
+                                background: "var(--gradient-accent)",
                                 WebkitBackgroundClip: "text",
                                 WebkitTextFillColor: "transparent",
                             }}
