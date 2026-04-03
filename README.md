@@ -29,7 +29,7 @@ This application doesn't just read questions to you; it autonomously parses the 
 
 ## 📂 Project Structure
 
-\`\`\`text
+```text
 InterviewMockApp/
 ├── src/
 │   ├── app/
@@ -48,37 +48,37 @@ InterviewMockApp/
 ├── .env.local                   # Environment Variables
 ├── package.json                 
 └── tsconfig.json                
-\`\`\`
+```
 
 ---
 
 ## ⚙️ How to Set it Up
 
 1. **Clone the repository**
-   \`\`\`bash
+   ```bash
    git clone <repository_link>
    cd InterviewMockApp
-   \`\`\`
+   ```
 
 2. **Install Dependencies**
-   \`\`\`bash
+   ```bash
    npm install
-   \`\`\`
+   ```
 
 3. **Configure Environment Variables**
-   Create a \`.env.local\` file in the root directory and add your Google Gemini API Key:
-   \`\`\`text
+   Create a `.env.local` file in the root directory and add your Google Gemini API Key:
+   ```text
    GEMINI_API_KEY=your_google_ai_studio_api_key_here
    NEXT_PUBLIC_APP_URL=http://localhost:3000
-   \`\`\`
+   ```
 
 4. **Run the Development Server**
-   \`\`\`bash
+   ```bash
    npm run dev
-   \`\`\`
+   ```
    Navigate to [http://localhost:3000](http://localhost:3000) inside your web browser.
 
-> **Note on Browser Compatibility:** This application uses experimental browser features like \`SpeechRecognition\`. For the best experience, including live transcription and text-to-speech features, it is recommended to run this within a modern chromium-based browser (like Google Chrome or Edge). Ensure you grant both Camera and Microphone permissions when requested.
+> **Note on Browser Compatibility:** This application uses experimental browser features like `SpeechRecognition`. For the best experience, including live transcription and text-to-speech features, it is recommended to run this within a modern chromium-based browser (like Google Chrome or Edge). Ensure you grant both Camera and Microphone permissions when requested.
 
 ---
 
