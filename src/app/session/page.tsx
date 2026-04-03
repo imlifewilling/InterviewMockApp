@@ -71,6 +71,18 @@ export default function SessionPage() {
         // The utterance doesn't seem to fire onend on Chrome unless the onboundary or something interrupts
         // it, or if volume > 0, so make sure not muted and also attach an onresume
         utterance.volume = 1;
+
+        // Ensure we strictly load a built-in voice, otherwise Chrome might silently play nothing
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            const englishVoices = voices.filter(v => v.lang.startsWith('en'));
+            const preferred = englishVoices.find(v => 
+                v.name.includes('Samantha') || 
+                v.name.includes('Google US English') || 
+                v.name.includes('Alex')
+            );
+            utterance.voice = preferred || englishVoices[0] || voices[0];
+        }
         
         let hasEnded = false;
         
@@ -296,6 +308,16 @@ export default function SessionPage() {
                     <button className="btn" onClick={() => { if("speechSynthesis" in window) window.speechSynthesis.cancel(); router.push("/prep"); }} style={{ padding: "8px 14px", fontSize: "0.82rem" }}>
                         ← Back
                     </button>
+                    {state.sessionPhase === "READY" && (
+                         <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "var(--text-primary)" }}>
+                            Ready to Start
+                        </h1>
+                    )}
+                    {state.sessionPhase === "GREETING" && (
+                         <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "var(--text-primary)" }}>
+                            Interview Initialization
+                        </h1>
+                    )}
                     {state.sessionPhase === "INTERVIEW" && (
                          <h1 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "var(--text-primary)" }}>
                             Question {state.currentQuestionIndex + 1} / {totalQuestions}
@@ -331,6 +353,30 @@ export default function SessionPage() {
 
             {/* LEFT: Context + Controls */}
             <div className="animate-fade-in-up" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {state.sessionPhase === "READY" && (
+                    <div className="glass-card" style={{ padding: "32px", textAlign: "center", display: "flex", flexDirection: "column", gap: "16px", alignItems: "center" }}>
+                        <h2 style={{ fontSize: "1.4rem", margin: 0, color: "var(--text-primary)" }}>Permissions Granted</h2>
+                        <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.95rem" }}>
+                            Your camera and microphone are ready. Click below to begin your interview.
+                        </p>
+                        <button 
+                            className="btn btn-primary" 
+                            onClick={() => {
+                                // Unlock speech context cleanly here
+                                if ("speechSynthesis" in window) {
+                                    window.speechSynthesis.cancel();
+                                    const unlock = new SpeechSynthesisUtterance("");
+                                    unlock.volume = 0;
+                                    window.speechSynthesis.speak(unlock);
+                                }
+                                dispatch({ type: "SET_SESSION_PHASE", payload: "GREETING" });
+                            }} 
+                            style={{ padding: "14px 32px", fontSize: "1.05rem", fontWeight: "bold" }}
+                        >
+                            🎬 Start Interview Now
+                        </button>
+                    </div>
+                )}
                 {state.sessionPhase === "GREETING" && (
                     <div className="glass-card" style={{ padding: "24px", textAlign: "center" }}>
                         <LoadingPulse message="Recruiter is reviewing your profile and greeting you..." />
@@ -430,7 +476,7 @@ export default function SessionPage() {
 
             {/* RIGHT: Camera */}
             <div>
-                 {(state.sessionPhase === "INTERVIEW" || state.sessionPhase === "CANDIDATE_QA") ? (
+                 {(state.sessionPhase === "INTERVIEW" || state.sessionPhase === "CANDIDATE_QA" || state.sessionPhase === "READY") ? (
                     <div style={{ opacity: agentSpeaking ? 0.6 : 1, transition: "opacity 0.3s", pointerEvents: agentSpeaking ? "none" : "auto" }}>
                         <CameraRecorder
                             stream={stream}

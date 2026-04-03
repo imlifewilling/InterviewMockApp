@@ -58,7 +58,7 @@ export default function PrepPage() {
             window.speechSynthesis.speak(utterance);
         }
         dispatch({ type: "SET_QUESTION_INDEX", payload: 0 });
-        dispatch({ type: "SET_SESSION_PHASE", payload: "GREETING" });
+        dispatch({ type: "SET_SESSION_PHASE", payload: "READY" });
         router.push("/session");
     };
 

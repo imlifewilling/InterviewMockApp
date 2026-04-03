@@ -40,7 +40,7 @@ export interface Evaluation {
     suggestedAnswer?: string;
 }
 
-export type SessionPhase = "idle" | "GREETING" | "INTERVIEW" | "CANDIDATE_QA" | "WRAP_UP" | "done";
+export type SessionPhase = "idle" | "READY" | "GREETING" | "INTERVIEW" | "CANDIDATE_QA" | "WRAP_UP" | "done";
 
 export interface InterviewState {
     jobUrl: string;
