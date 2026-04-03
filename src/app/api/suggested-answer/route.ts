@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { getSuggestedAnswerPrompt } from "@/utils/prompts";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,12 +12,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing question" }, { status: 400 });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
         const prompt = getSuggestedAnswerPrompt(jobProfile, question.text, question.category, question.tips, resumeText);
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }]
+        });
+        const text = completion.choices[0].message.content?.trim() || "";
         const jsonStr = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "");
         const response = JSON.parse(jsonStr);
 

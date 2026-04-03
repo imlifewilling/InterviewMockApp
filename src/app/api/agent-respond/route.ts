@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { getAgentRespondPrompt } from "@/utils/prompts";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
     try {
         const { phase, transcript, jobProfile, conversationHistory } = await req.json();
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
         const prompt = getAgentRespondPrompt(jobProfile, phase, transcript, conversationHistory);
 
-        const result = await model.generateContent(prompt);
-        let text = result.response.text().trim();
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }]
+        });
+        let text = completion.choices[0].message.content?.trim() || "";
         
         // Minor cleanup for TTS (remove any accidental markdown, asterisks for bolding, etc)
         text = text.replace(/\\*\\*/g, "").replace(/\\*/g, "").replace(/#/g, "");

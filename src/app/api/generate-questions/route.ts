@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { getGenerateQuestionsPrompt } from "@/utils/prompts";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
     try {
@@ -11,19 +11,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing jobProfile" }, { status: 400 });
         }
 
-        // Use gemini-1.5-flash with Google Search grounding to find company-specific questions
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            // @ts-ignore tools typing
-            tools: [{ googleSearch: {} }],
-        });
-
         const { company, role, seniority, skills, cultureSignals } = jobProfile;
 
         const prompt = getGenerateQuestionsPrompt(company, role, seniority, skills, cultureSignals);
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }]
+        });
+        const text = completion.choices[0].message.content?.trim() || "";
 
         const jsonStr = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "");
         const questions = JSON.parse(jsonStr);

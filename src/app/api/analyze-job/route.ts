@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import OpenAI from "openai";
 import { getAnalyzeJobPrompt } from "@/utils/prompts";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
     try {
@@ -37,12 +37,13 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
         const prompt = getAnalyzeJobPrompt(pageText);
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }]
+        });
+        const text = completion.choices[0].message.content?.trim() || "";
 
         // Strip markdown code fences if present
         const jsonStr = text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/, "");

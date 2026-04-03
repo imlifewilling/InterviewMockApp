@@ -66,9 +66,9 @@ InterviewMockApp/
    ```
 
 3. **Configure Environment Variables**
-   Create a `.env.local` file in the root directory and add your Google Gemini API Key:
+   Create a `.env.local` file in the root directory and add your OpenAI API Key:
    ```text
-   GEMINI_API_KEY=your_google_ai_studio_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
    NEXT_PUBLIC_APP_URL=http://localhost:3000
    ```
 
