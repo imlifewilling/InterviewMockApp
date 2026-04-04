@@ -6,9 +6,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
     try {
-        const { phase, transcript, jobProfile, conversationHistory } = await req.json();
+        const { phase, transcript, jobProfile, conversationHistory, resumeText } = await req.json();
 
-        const prompt = getAgentRespondPrompt(jobProfile, phase, transcript, conversationHistory);
+        const prompt = getAgentRespondPrompt(jobProfile, phase, transcript, conversationHistory, resumeText);
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
         });
         let text = completion.choices[0].message.content?.trim() || "";
         
-        // Minor cleanup for TTS (remove any accidental markdown, asterisks for bolding, etc)
-        text = text.replace(/\\*\\*/g, "").replace(/\\*/g, "").replace(/#/g, "");
+        // Cleanup for TTS (remove any accidental markdown, asterisks, etc)
+        text = text.replace(/\*\*/g, "").replace(/\*/g, "").replace(/#/g, "").replace(/---/g, "");
 
         return NextResponse.json({ text });
     } catch (err) {

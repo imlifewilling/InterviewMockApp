@@ -6,14 +6,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
     try {
-        const { jobProfile } = await req.json();
+        const { jobProfile, resumeText } = await req.json();
         if (!jobProfile) {
             return NextResponse.json({ error: "Missing jobProfile" }, { status: 400 });
         }
 
         const { company, role, seniority, skills, cultureSignals } = jobProfile;
 
-        const prompt = getGenerateQuestionsPrompt(company, role, seniority, skills, cultureSignals);
+        const prompt = getGenerateQuestionsPrompt(company, role, seniority, skills, cultureSignals, resumeText);
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",

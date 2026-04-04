@@ -203,7 +203,7 @@ export default function HomePage() {
 
                         {isLoading && (
                             <LoadingPulse
-                                message={isAnalyzing ? "Analyzing job posting…" : "Generating tailored questions…"}
+                                message={isAnalyzing ? "Analyzing job posting…" : "Parsing resume & generating tailored questions…"}
                             />
                         )}
                     </form>

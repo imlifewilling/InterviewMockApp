@@ -48,6 +48,7 @@ export interface InterviewState {
     questions: BehavioralQuestion[];
     resumeFile: File | null;
     resumeDataUrl: string | null;
+    resumeText: string | null;
     recordings: Record<string, Recording>;
     evaluations: Record<string, Evaluation>;
     sessionPhase: SessionPhase;
@@ -62,6 +63,7 @@ const initialState: InterviewState = {
     questions: [],
     resumeFile: null,
     resumeDataUrl: null,
+    resumeText: null,
     recordings: {},
     evaluations: {},
     sessionPhase: "idle",
@@ -78,6 +80,7 @@ type Action =
     | { type: "SET_JOB_PROFILE"; payload: JobProfile }
     | { type: "SET_QUESTIONS"; payload: BehavioralQuestion[] }
     | { type: "SET_RESUME"; payload: { file: File; dataUrl: string } }
+    | { type: "SET_RESUME_TEXT"; payload: string }
     | { type: "ADD_RECORDING"; payload: Recording }
     | { type: "ADD_EVALUATION"; payload: Evaluation }
     | { type: "SET_SESSION_PHASE"; payload: SessionPhase }
@@ -97,6 +100,8 @@ function reducer(state: InterviewState, action: Action): InterviewState {
             return { ...state, questions: action.payload };
         case "SET_RESUME":
             return { ...state, resumeFile: action.payload.file, resumeDataUrl: action.payload.dataUrl };
+        case "SET_RESUME_TEXT":
+            return { ...state, resumeText: action.payload };
         case "ADD_RECORDING":
             return {
                 ...state,

@@ -6,13 +6,13 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: NextRequest) {
     try {
-        const { question, transcript, durationSeconds, jobProfile } = await req.json();
+        const { question, transcript, durationSeconds, jobProfile, resumeText } = await req.json();
 
         if (!question || !transcript) {
             return NextResponse.json({ error: "Missing question or transcript" }, { status: 400 });
         }
 
-        const prompt = getEvaluateAnswerPrompt(jobProfile, question.text, question.category, transcript, durationSeconds);
+        const prompt = getEvaluateAnswerPrompt(jobProfile, question.text, question.category, transcript, durationSeconds, resumeText);
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",

@@ -132,7 +132,7 @@ export default function SessionPage() {
             const res = await fetch("/api/agent-respond", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ phase: "WRAP_UP", jobProfile: state.jobProfile })
+                body: JSON.stringify({ phase: "WRAP_UP", jobProfile: state.jobProfile, resumeText: state.resumeText })
             });
             const data = await res.json();
             speak(data.text || "We are out of time. Thank you for your time today.", () => {
@@ -143,7 +143,7 @@ export default function SessionPage() {
             dispatch({ type: "SET_SESSION_PHASE", payload: "done" });
             router.push("/results");
         }
-    }, [dispatch, router, speak, state.jobProfile]);
+    }, [dispatch, router, speak, state.jobProfile, state.resumeText]);
 
     // Tracking for fetching greeting
     const isFetchingGreetingReq = useRef(false);
@@ -161,7 +161,7 @@ export default function SessionPage() {
                     const res = await fetch("/api/agent-respond", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ phase: "GREETING", jobProfile: state.jobProfile })
+                        body: JSON.stringify({ phase: "GREETING", jobProfile: state.jobProfile, resumeText: state.resumeText })
                     });
                     const data = await res.json();
                     speak(data.text || "Hello, I am the recruiter. Let's begin the interview.", () => {
@@ -180,7 +180,7 @@ export default function SessionPage() {
                  }, 500);
             }
         }
-    }, [state.sessionPhase, state.jobProfile, currentQuestion, dispatch, speak, stream]);
+    }, [state.sessionPhase, state.jobProfile, state.resumeText, currentQuestion, dispatch, speak, stream]);
 
     const handleRecordingComplete = (blob: Blob, duration: number, transcript: string) => {
         if (state.sessionPhase === "CANDIDATE_QA") {
@@ -209,6 +209,7 @@ export default function SessionPage() {
                     transcript: currentRecording.transcript,
                     durationSeconds: currentRecording.duration,
                     jobProfile: state.jobProfile,
+                    resumeText: state.resumeText,
                 }),
             });
 
@@ -234,7 +235,7 @@ export default function SessionPage() {
                  speak("Thank you. Moving to the next question.");
             }
         }
-    }, [currentRecording, currentQuestion, dispatch, isLastQuestion, state.currentQuestionIndex, state.jobProfile, timeIsUp, triggerWrapUp, speak]);
+    }, [currentRecording, currentQuestion, dispatch, isLastQuestion, state.currentQuestionIndex, state.jobProfile, state.resumeText, timeIsUp, triggerWrapUp, speak]);
 
     const handleQASubmit = useCallback(async () => {
          if (!qaRecordings) return;
@@ -251,7 +252,8 @@ export default function SessionPage() {
                     phase: "CANDIDATE_QA", 
                     jobProfile: state.jobProfile,
                     transcript: qaRecordings.transcript,
-                    conversationHistory: updatedHistory
+                    conversationHistory: updatedHistory,
+                    resumeText: state.resumeText
                  })
              });
              const data = await res.json();
@@ -269,7 +271,7 @@ export default function SessionPage() {
              setEvaluating(false);
              setQaRecordings(null);
          }
-    }, [qaRecordings, conversationHistory, state.jobProfile, speak, timeIsUp, triggerWrapUp]);
+    }, [qaRecordings, conversationHistory, state.jobProfile, state.resumeText, speak, timeIsUp, triggerWrapUp]);
 
     const formatTimer = (secs: number) => {
         const m = Math.floor(secs / 60);
