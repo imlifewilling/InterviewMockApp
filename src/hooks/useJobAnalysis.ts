@@ -87,28 +87,30 @@ export function useJobAnalysis() {
         try {
             // Parse resume first if available
             let resumeText: string | null = null;
-            if (state.resumeDataUrl) {
+            if (state.resumeFile) {
                 resumeText = state.resumeText;
                 if (!resumeText) {
-                    // Parse resume inline
+                    // Parse resume by sending the actual file via FormData
                     try {
+                        const formData = new FormData();
+                        formData.append("file", state.resumeFile);
+                        
                         const parseRes = await fetch("/api/parse-resume", {
                             method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                resumeDataUrl: state.resumeDataUrl,
-                                fileName: state.resumeFile?.name || "resume",
-                            }),
+                            body: formData,
                         });
                         if (parseRes.ok) {
                             const parseData = await parseRes.json();
                             resumeText = parseData.resumeText || null;
                             if (resumeText) {
                                 dispatch({ type: "SET_RESUME_TEXT", payload: resumeText });
+                                console.log("[InterviewAI] Resume parsed:", resumeText.slice(0, 100) + "...");
                             }
+                        } else {
+                            console.warn("[InterviewAI] Resume parsing response not ok:", parseRes.status);
                         }
-                    } catch {
-                        console.warn("[InterviewAI] Resume parsing skipped");
+                    } catch (parseErr) {
+                        console.warn("[InterviewAI] Resume parsing skipped:", parseErr);
                     }
                 }
             }

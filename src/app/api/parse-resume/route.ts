@@ -1,66 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import PDFParser from "pdf2json";
 
 export async function POST(req: NextRequest) {
     try {
-        const { resumeDataUrl, fileName } = await req.json();
+        const formData = await req.formData();
+        const file = formData.get("file") as File | null;
 
-        if (!resumeDataUrl) {
-            return NextResponse.json({ error: "Missing resume data" }, { status: 400 });
+        if (!file) {
+            return NextResponse.json({ error: "Missing resume file" }, { status: 400 });
         }
 
-        // Use GPT-4o-mini vision to extract text from the resume
-        // Works with PDF rendered as images, doc screenshots, etc.
-        const prompt = `Extract ALL text content from this resume document. Return the complete text exactly as it appears, preserving the structure (sections, bullet points, dates, etc.). Include everything: name, contact info, summary, experience, education, skills, certifications, projects — every single detail.
+        const fileName = file.name;
+        const mimeType = file.type || "application/octet-stream";
 
-If the document is not readable or not a resume, return "UNREADABLE".
+        console.log(`[parse-resume] Processing file: ${fileName}, MIME: ${mimeType}, Size: ${file.size} bytes`);
 
-Return ONLY the extracted text, no commentary.`;
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        let resumeText = "";
 
-        // Determine MIME type from data URL
-        const mimeMatch = resumeDataUrl.match(/^data:([^;]+);/);
-        const mimeType = mimeMatch ? mimeMatch[1] : "application/pdf";
-
-        // For text-based files, we can extract directly
+        // Handle different file types
         if (mimeType === "text/plain") {
-            const base64 = resumeDataUrl.split(",")[1];
-            const text = Buffer.from(base64, "base64").toString("utf-8");
-            return NextResponse.json({ resumeText: text });
-        }
-
-        // For PDFs and docs, use GPT-4o vision to extract text
-        const completion = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                {
-                    role: "user",
-                    content: [
-                        { type: "text", text: prompt },
-                        {
-                            type: "image_url",
-                            image_url: {
-                                url: resumeDataUrl,
-                                detail: "high",
-                            },
-                        },
-                    ],
-                },
-            ],
-            max_tokens: 4000,
-        });
-
-        const resumeText = completion.choices[0].message.content?.trim() || "";
-
-        if (resumeText === "UNREADABLE" || resumeText.length < 50) {
-            // Fallback: just send the filename as minimal context
-            return NextResponse.json({ 
-                resumeText: `Resume uploaded: ${fileName || "resume"}. Could not extract full text content.`,
-                partial: true 
+            resumeText = buffer.toString("utf-8");
+        } else if (mimeType === "application/pdf") {
+            try {
+                // @ts-ignore
+                const pdfParser = new PDFParser(null, 1);
+                resumeText = await new Promise<string>((resolve, reject) => {
+                    pdfParser.on("pdfParser_dataError", (errData: any) => reject(errData.parserError));
+                    pdfParser.on("pdfParser_dataReady", () => {
+                        resolve(pdfParser.getRawTextContent());
+                    });
+                    pdfParser.parseBuffer(buffer);
+                });
+                console.log(`[parse-resume] Extracted ${resumeText.length} chars from PDF`);
+            } catch (pdfErr) {
+                console.error("[parse-resume] PDF parsing failed:", pdfErr);
+                return NextResponse.json({
+                    resumeText: `Resume uploaded: ${fileName}. PDF text extraction failed — please try a .txt version.`,
+                    partial: true,
+                });
+            }
+        } else if (
+            mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+            mimeType === "application/msword"
+        ) {
+            return NextResponse.json({
+                resumeText: `Resume uploaded: ${fileName}. For best results, please upload a PDF or TXT version.`,
+                partial: true,
+            });
+        } else {
+            return NextResponse.json({
+                resumeText: `Resume uploaded: ${fileName}. Format (${mimeType}) not fully supported — please use PDF or TXT.`,
+                partial: true,
             });
         }
 
+        // Clean up extracted text
+        resumeText = resumeText
+            .replace(/----------------Page \(\d+\) Break----------------/g, "")
+            .replace(/\r\n/g, "\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .replace(/[ \t]{2,}/g, " ")
+            .trim();
+
+        if (resumeText.length < 50) {
+            return NextResponse.json({
+                resumeText: `Resume uploaded: ${fileName}. Could not extract enough text — the PDF may be image-based. Try a text-based PDF.`,
+                partial: true,
+            });
+        }
+
+        // Truncate to reasonable length for LLM context
+        if (resumeText.length > 6000) {
+            resumeText = resumeText.slice(0, 6000);
+        }
+
+        console.log(`[parse-resume] Success — ${resumeText.length} chars extracted from ${fileName}`);
         return NextResponse.json({ resumeText });
     } catch (err) {
         console.error("[parse-resume]", err);
