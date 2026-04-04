@@ -1,6 +1,5 @@
 export const getAnalyzeJobPrompt = (pageText: string, url: string) => `You are a senior technical recruiter with 15+ years of experience hiring at top-tier companies. Analyze this job posting. Return a JSON object with this exact shape:
 {
-  "company": "<Strictly the company name extracted from the job description text or URL. DO NOT guess, hallucinate, or default to generic tech companies like 'Microsoft' or 'XYZ Corp'. If completely unknown, return 'the hiring company'>",
   "role": "<job title>",
   "seniority": "<entry|mid|senior|lead|principal>",
   "skills": ["<top technical and soft skills, max 10>"],
@@ -16,13 +15,12 @@ ${pageText}
 Return ONLY valid JSON, no markdown, no explanation.`;
 
 export const getGenerateQuestionsPrompt = (
-    company: string,
     role: string,
     seniority: string,
     skills: string[] = [],
     cultureSignals: string[] = []
 ) => {
-    return `You are a seasoned senior recruiter at ${company} with 15+ years of experience conducting behavioral interviews for ${seniority}-level ${role} positions. You have a reputation for asking incisive, layered questions that reveal a candidate's true depth of experience.
+    return `You are a seasoned senior recruiter with 15+ years of experience conducting behavioral interviews for ${seniority}-level ${role} positions. You have a reputation for asking incisive, layered questions that reveal a candidate's true depth of experience.
 
 Your interview philosophy:
 - You phrase questions naturally as open-ended scenarios ("Tell me about a time...", "Describe a situation...").
@@ -33,7 +31,7 @@ Your interview philosophy:
 Role requirements — key skills: ${skills.join(", ")}
 Culture signals to assess: ${cultureSignals.join(", ")}
 
-Search for real behavioral interview questions commonly asked at ${company} for ${role} roles. 
+Search for real behavioral interview questions commonly asked for ${role} roles. 
 
 Generate exactly 8 behavioral interview questions. Create a unified mix:
 - 3 questions about navigating ambiguity, rapidly changing requirements, or tight deadlines.
@@ -48,7 +46,7 @@ Return a JSON array with this exact shape:
     "text": "<full question text — should be specific and probing, not generic>",
     "category": "<Leadership|Conflict|Problem-Solving|Collaboration|Growth|Technical|Culture|Resilience>",
     "tips": "<2-3 sentence interviewer tip on what a great answer looks like, including what red flags to watch for>",
-    "searchContext": "<brief note if this is commonly asked at ${company}, otherwise null>"
+    "searchContext": "<brief note if this is a commonly asked question>"
   },
   ...
 ]
@@ -68,9 +66,8 @@ export const getEvaluateAnswerPrompt = (
         ? `\nCandidate's Resume:\n${resumeText}\n\nCross-reference the candidate's answer with their resume. Check for consistency — do the experiences they describe align with their resume? Are they drawing on real experiences or fabricating? Give credit for specific, verifiable details that match their background.\n`
         : "";
 
-    return `You are a senior interview coach and former head of recruiting at a Fortune 500 company. You have evaluated thousands of behavioral interview answers and trained hundreds of interviewers. Your evaluations are known for being rigorous but constructive.
+    return `You are a senior interview coach and former head of recruiting at a top-tier organization. You have evaluated thousands of behavioral interview answers and trained hundreds of interviewers. Your evaluations are known for being rigorous but constructive.
 
-Company: ${jobProfile?.company || "the company"}
 Role: ${jobProfile?.role || "the role"} (${jobProfile?.seniority || ""} level)
 Required skills: ${jobProfile?.skills?.join(", ") || "not specified"}
 ${resumeSection}

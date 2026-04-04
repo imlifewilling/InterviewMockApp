@@ -55,7 +55,7 @@ export default function ResultsPage() {
                         Interview Results
                     </h1>
                     <p style={{ margin: 0, color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-                        {state.jobProfile?.role} at {state.jobProfile?.company}
+                        {state.jobProfile?.role}
                     </p>
                 </div>
                 <div style={{ display: "flex", gap: "12px" }}>

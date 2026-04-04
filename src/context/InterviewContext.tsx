@@ -6,7 +6,6 @@ import React, { createContext, useContext, useReducer, useEffect, useRef, ReactN
    TYPES
    ============================================================ */
 export interface JobProfile {
-    company: string;
     role: string;
     seniority: string;
     skills: string[];

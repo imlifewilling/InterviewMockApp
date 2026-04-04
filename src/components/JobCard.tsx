@@ -29,9 +29,6 @@ export function JobCard({ job }: JobCardProps) {
                     >
                         {job.role}
                     </h2>
-                    <p style={{ margin: "4px 0 0", color: "var(--text-secondary)", fontSize: "1rem" }}>
-                        {job.company}
-                    </p>
                 </div>
                 <span
                     style={{
