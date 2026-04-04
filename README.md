@@ -7,13 +7,13 @@ This application doesn't just read questions to you; it autonomously parses the 
 ---
 
 ## 🚀 Features
-- **Job Posting Analysis:** Paste a job link and let the AI extract the company name, role, expected seniority, culture signals, and required skills.
-- **Dynamic Question Generation:** Utilizing the job profile, the app synthesizes tailored behavioral interview questions relevant strictly to the role.
-- **Personalized STAR Suggestions:** Upload a text-based resume before the session, and the AI will analyze your background alongside the job to construct a strong, personalized example answer formatted in the STAR method for reference.
+- **Job Posting Analysis:** Paste a job link and let the AI intelligently extract the role, expected seniority, culture signals, and required skills directly from the URL.
+- **Dynamic Question Generation:** Utilizing the job profile, the app synthesizes universal, targeted behavioral interview questions relevant strictly to the role boundaries (no hallucinated companies or hyper-specific technical constraints).
+- **Personalized STAR Suggestions:** Upload your actual PDF or TXT resume before the session. The app natively parses your document and cross-references your background against the job constraints to construct a strong, personalized example answer formatted in the STAR method for your reference.
 - **Conversational Recruiter AI:** The application manages an immersive environment running within a 30-minute logical span, utilizing `window.speechSynthesis` (Text-to-Speech) to audibly ask you questions and gracefully wrap up the mock interview when the time runs out.
-- **Candidate Q&A Phase:** Ask the simulated recruiter realistic questions about the role or company. The recruiter acts dynamically through conversation context!
+- **Candidate Q&A Phase:** Ask the simulated recruiter realistic questions about the role. The recruiter acts dynamically through conversation context!
 - **Real-Time Video & Transcription:** Integration with `MediaRecorder` and the Web Speech API securely records your answer on device while transcribing your response.
-- **Expert Rubric Evaluation:** Computes and assesses your answer transcript via Google's Gemini 1.5 Flash algorithm to provide quantitative *(0-100)* scores on Delivery and Content, highlighting strengths, room for improvement, and a suggested robust alternative answer.
+- **Expert Rubric Evaluation:** Computes and assesses your answer transcript via the OpenAI algorithm to provide quantitative *(0-100)* scores on Delivery and Content, highlighting strengths, room for improvement, and a suggested robust alternative answer.
 
 ---
 
@@ -21,7 +21,8 @@ This application doesn't just read questions to you; it autonomously parses the 
 - **Framework:** [Next.js (App Router)](https://nextjs.org/)
 - **Core Library:** React 18
 - **Language:** TypeScript
-- **AI Processing Engine:** Google Gemini 1.5 Flash / `@google/generative-ai`
+- **AI Processing Engine:** OpenAI API (`gpt-4o-mini`) via the `openai` Node SDK
+- **Document Parsing:** `pdf2json` for robust, server-side PDF text extraction
 - **Audio/Video Context:** browser-native `MediaStream`, `MediaRecorder`, and `Web Speech API` (SpeechRecognition & speechSynthesis)
 - **Styling:** Custom CSS/CSS Custom Properties (`globals.css`) with Glassmorphism theming
 
@@ -86,7 +87,7 @@ InterviewMockApp/
 
 1. **Paste a Job URL:**
    Find a job posting on your favorite job board (LinkedIn, Greenhouse, generic career pages), copy the link, and paste it into the startup screen.
-   *(Optional: You can paste text from your resume directly into the provided resume context zone if you want tailored STAR suggestions.)*
+   *(Optional: You can upload your PDF or TXT resume securely via the dropzone. It will be parsed directly for personalized STAR suggestions and answer reviews.)*
 
 2. **Review your Questions:**
    The algorithm will interpret the posting and generate specific behavioral questions. You can review them on the `/prep` page. If you uploaded logic from your resume, you can request an instant **STAR breakdown answer template**.
