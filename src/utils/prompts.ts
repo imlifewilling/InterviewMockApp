@@ -1,12 +1,14 @@
-export const getAnalyzeJobPrompt = (pageText: string) => `You are a senior technical recruiter with 15+ years of experience hiring at top-tier companies. Analyze this job posting with the trained eye of someone who has reviewed thousands of job descriptions. Return a JSON object with this exact shape:
+export const getAnalyzeJobPrompt = (pageText: string, url: string) => `You are a senior technical recruiter with 15+ years of experience hiring at top-tier companies. Analyze this job posting. Return a JSON object with this exact shape:
 {
-  "company": "<company name>",
+  "company": "<Strictly the company name extracted from the job description text or URL. DO NOT guess, hallucinate, or default to generic tech companies like 'Microsoft' or 'XYZ Corp'. If completely unknown, return 'the hiring company'>",
   "role": "<job title>",
   "seniority": "<entry|mid|senior|lead|principal>",
   "skills": ["<top technical and soft skills, max 10>"],
   "cultureSignals": ["<culture keywords from posting, max 6>"],
   "rawDescription": "<first 2000 chars of cleaned job description>"
 }
+
+Job Posting URL (for context): ${url}
 
 Job posting text:
 ${pageText}
@@ -18,31 +20,26 @@ export const getGenerateQuestionsPrompt = (
     role: string,
     seniority: string,
     skills: string[] = [],
-    cultureSignals: string[] = [],
-    resumeText?: string
+    cultureSignals: string[] = []
 ) => {
-    const resumeSection = resumeText
-        ? `\nCandidate's Resume:\n${resumeText}\n\nIMPORTANT: You MUST craft questions that specifically probe the candidate's resume experiences. Reference their specific projects, companies, role transitions, and claimed skills. Ask them to elaborate on concrete resume items. For example, if they list "led migration to microservices," ask them to walk through the decision-making, challenges, and measurable outcomes of that initiative.\n`
-        : `\nNo resume provided. Generate strong general behavioral questions based on the role requirements.\n`;
-
-    return `You are a seasoned senior recruiter at ${company} with 15+ years of experience conducting behavioral interviews for ${seniority}-level ${role} positions. You have a reputation for asking incisive, layered questions that reveal a candidate's true depth of experience versus surface-level knowledge.
+    return `You are a seasoned senior recruiter at ${company} with 15+ years of experience conducting behavioral interviews for ${seniority}-level ${role} positions. You have a reputation for asking incisive, layered questions that reveal a candidate's true depth of experience.
 
 Your interview philosophy:
-- You ask questions that connect the candidate's specific background to the role requirements
-- You probe for concrete metrics, real challenges, and honest failures — not rehearsed stories
-- You look for evidence of growth mindset, ownership, and impact at scale
-- You cross-reference resume claims with behavioral evidence
+- You phrase questions naturally as open-ended scenarios ("Tell me about a time...", "Describe a situation...").
+- You are a recruiter, NOT an engineering manager. Do NOT ask specific technical implementation questions like "Describe a time you built a RESTful API" or "How did you optimize a database?". 
+- Instead, ask TRADITIONAL behavioral questions (navigating ambiguity, dealing with tight deadlines, managing stakeholders, handling failure, pushing back on requirements) that happen to occur in a technical environment.
+- You probe for concrete metrics, real challenges, and honest failures.
 
 Role requirements — key skills: ${skills.join(", ")}
 Culture signals to assess: ${cultureSignals.join(", ")}
-${resumeSection}
-Search for real behavioral interview questions commonly asked at ${company} for ${role} roles. Combine those with targeted questions based on the candidate's background and the role requirements.
 
-Generate exactly 8 behavioral interview questions. Mix these categories:
-- 2-3 questions that directly probe specific resume experiences (if resume provided)
-- 2-3 questions targeting the core skills required for the role
-- 1-2 questions assessing culture fit and leadership style
-- 1 question about failure, conflict, or a difficult trade-off
+Search for real behavioral interview questions commonly asked at ${company} for ${role} roles. 
+
+Generate exactly 8 behavioral interview questions. Create a unified mix:
+- 3 questions about navigating ambiguity, rapidly changing requirements, or tight deadlines.
+- 2 questions about cross-functional collaboration, stakeholder management, or resolving conflicts with teammates/managers.
+- 2 questions about failure, overcoming a major technical/project roadblock, or learning from a mistake.
+- 1 question assessing culture fit or leadership style.
 
 Return a JSON array with this exact shape:
 [

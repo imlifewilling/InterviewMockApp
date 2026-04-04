@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const prompt = getAnalyzeJobPrompt(pageText);
+        const prompt = getAnalyzeJobPrompt(pageText, url);
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",

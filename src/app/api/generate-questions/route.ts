@@ -12,8 +12,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { company, role, seniority, skills, cultureSignals } = jobProfile;
-
-        const prompt = getGenerateQuestionsPrompt(company, role, seniority, skills, cultureSignals, resumeText);
+        const prompt = getGenerateQuestionsPrompt(company, role, seniority, skills, cultureSignals);
 
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
