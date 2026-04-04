@@ -24,6 +24,9 @@ export default function SessionPage() {
     // Q&A mode states
     const [qaRecordings, setQaRecordings] = useState<{ transcript: string, duration: number, blob: Blob } | null>(null);
 
+    // Track current audio for cleanup
+    const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+
     const currentQuestion = state.questions[state.currentQuestionIndex];
     const totalQuestions = state.questions.length;
     const isLastQuestion = state.currentQuestionIndex >= totalQuestions - 1;
@@ -36,11 +39,12 @@ export default function SessionPage() {
         };
     }, [startCamera, stopCamera]);
 
-    // Cancel speech only on unmount safely
+    // Clean up audio on unmount
     useEffect(() => {
         return () => {
-            if ("speechSynthesis" in window) {
-                window.speechSynthesis.cancel();
+            if (currentAudioRef.current) {
+                currentAudioRef.current.pause();
+                currentAudioRef.current = null;
             }
         };
     }, []);
@@ -59,61 +63,66 @@ export default function SessionPage() {
         return () => clearInterval(interval);
     }, []);
 
-    const speak = useCallback((text: string, onEnd?: () => void) => {
-        if (!("speechSynthesis" in window)) {
-            if (onEnd) onEnd();
-            return;
+    const speak = useCallback(async (text: string, onEnd?: () => void) => {
+        // Stop any currently playing audio
+        if (currentAudioRef.current) {
+            currentAudioRef.current.pause();
+            currentAudioRef.current = null;
         }
-        window.speechSynthesis.cancel();
         setAgentSpeaking(true);
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.05;
-        // The utterance doesn't seem to fire onend on Chrome unless the onboundary or something interrupts
-        // it, or if volume > 0, so make sure not muted and also attach an onresume
-        utterance.volume = 1;
+        console.log("[InterviewAI] Speaking via OpenAI TTS:", text.slice(0, 80) + "...");
 
-        // Ensure we strictly load a built-in voice, otherwise Chrome might silently play nothing
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-            const englishVoices = voices.filter(v => v.lang.startsWith('en'));
-            const preferred = englishVoices.find(v => 
-                v.name.includes('Samantha') || 
-                v.name.includes('Google US English') || 
-                v.name.includes('Alex')
-            );
-            utterance.voice = preferred || englishVoices[0] || voices[0];
+        try {
+            const res = await fetch("/api/tts", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text }),
+            });
+
+            if (!res.ok) {
+                throw new Error(`TTS API error: ${res.status}`);
+            }
+
+            const audioBlob = await res.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            currentAudioRef.current = audio;
+
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                currentAudioRef.current = null;
+                setAgentSpeaking(false);
+                console.log("[InterviewAI] TTS playback finished.");
+                if (onEnd) onEnd();
+            };
+
+            audio.onerror = (e) => {
+                console.error("[InterviewAI] Audio playback error:", e);
+                URL.revokeObjectURL(audioUrl);
+                currentAudioRef.current = null;
+                setAgentSpeaking(false);
+                if (onEnd) onEnd();
+            };
+
+            await audio.play();
+            console.log("[InterviewAI] TTS audio playing...");
+        } catch (err) {
+            console.error("[InterviewAI] TTS failed, falling back to speechSynthesis:", err);
+            // Fallback to browser speechSynthesis
+            if ("speechSynthesis" in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                utterance.volume = 1;
+                utterance.onend = () => { setAgentSpeaking(false); if (onEnd) onEnd(); };
+                utterance.onerror = () => { setAgentSpeaking(false); if (onEnd) onEnd(); };
+                window.speechSynthesis.speak(utterance);
+            } else {
+                setAgentSpeaking(false);
+                if (onEnd) onEnd();
+            }
         }
-        
-        let hasEnded = false;
-        
-        // Safety timeout to prevent the app from hanging if speech synthesis fails silently
-        const estimatedDurationMs = Math.max(4000, (text.length / 15) * 1000 + 4000); 
-        const timeoutId = setTimeout(() => {
-            if (!hasEnded) {
-                console.warn("Speech synthesis timeout bypass triggered");
-                hasEnded = true;
-                setAgentSpeaking(false);
-                if (onEnd) onEnd();
-            }
-        }, estimatedDurationMs);
-
-        const finish = () => {
-            if (!hasEnded) {
-                clearTimeout(timeoutId);
-                hasEnded = true;
-                setAgentSpeaking(false);
-                if (onEnd) onEnd();
-            }
-        };
-        
-        utterance.onend = finish;
-        utterance.onerror = finish;
-
-        // Prevent garbage collection bug in Chrome/Safari
-        Object.assign(window, { currentUtterance: utterance });
-        // Reset any paused state
-        window.speechSynthesis.resume();
-        window.speechSynthesis.speak(utterance);
     }, []);
 
     // End of interview wrap up
@@ -305,7 +314,7 @@ export default function SessionPage() {
                 }}
             >
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <button className="btn" onClick={() => { if("speechSynthesis" in window) window.speechSynthesis.cancel(); router.push("/prep"); }} style={{ padding: "8px 14px", fontSize: "0.82rem" }}>
+                    <button className="btn" onClick={() => { if (currentAudioRef.current) { currentAudioRef.current.pause(); currentAudioRef.current = null; } router.push("/prep"); }} style={{ padding: "8px 14px", fontSize: "0.82rem" }}>
                         ← Back
                     </button>
                     {state.sessionPhase === "READY" && (
@@ -362,13 +371,6 @@ export default function SessionPage() {
                         <button 
                             className="btn btn-primary" 
                             onClick={() => {
-                                // Unlock speech context cleanly here
-                                if ("speechSynthesis" in window) {
-                                    window.speechSynthesis.cancel();
-                                    const unlock = new SpeechSynthesisUtterance("");
-                                    unlock.volume = 0;
-                                    window.speechSynthesis.speak(unlock);
-                                }
                                 dispatch({ type: "SET_SESSION_PHASE", payload: "GREETING" });
                             }} 
                             style={{ padding: "14px 32px", fontSize: "1.05rem", fontWeight: "bold" }}

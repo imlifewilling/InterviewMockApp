@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useRef, ReactNode } from "react";
 
 /* ============================================================
    TYPES
@@ -84,7 +84,8 @@ type Action =
     | { type: "SET_QUESTION_INDEX"; payload: number }
     | { type: "SET_LOADING"; payload: boolean }
     | { type: "SET_ERROR"; payload: string | null }
-    | { type: "RESET" };
+    | { type: "RESET" }
+    | { type: "HYDRATE_FROM_STORAGE"; payload: InterviewState };
 
 function reducer(state: InterviewState, action: Action): InterviewState {
     switch (action.type) {
@@ -116,6 +117,8 @@ function reducer(state: InterviewState, action: Action): InterviewState {
             return { ...state, error: action.payload, isLoading: false };
         case "RESET":
             return initialState;
+        case "HYDRATE_FROM_STORAGE":
+            return action.payload;
         default:
             return state;
     }
@@ -134,37 +137,42 @@ const InterviewContext = createContext<InterviewContextValue | undefined>(undefi
 const SESSION_KEY = "interview_session_state";
 
 export function InterviewProvider({ children }: { children: ReactNode }) {
-    const [state, dispatch] = useReducer(reducer, initialState, () => {
-        if (typeof window !== "undefined") {
-            try {
-                const saved = sessionStorage.getItem(SESSION_KEY);
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    // Don't restore blobs (non-serializable); restore everything else
-                    return {
+    // Always initialize with the same state on both server & client to avoid hydration mismatch
+    const [state, dispatch] = useReducer(reducer, initialState);
+    const hasHydrated = useRef(false);
+
+    // Restore from sessionStorage AFTER mount (client-only), avoids hydration mismatch
+    useEffect(() => {
+        if (hasHydrated.current) return;
+        hasHydrated.current = true;
+        try {
+            const saved = sessionStorage.getItem(SESSION_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                dispatch({
+                    type: "HYDRATE_FROM_STORAGE",
+                    payload: {
                         ...initialState,
                         ...parsed,
                         recordings: {},      // blobs can't be serialized
                         resumeFile: null,    // File can't be serialized
-                    };
-                }
-            } catch { }
-        }
-        return initialState;
-    });
+                    },
+                });
+            }
+        } catch { }
+    }, []);
 
     // Persist to sessionStorage on state change (skip non-serializable items)
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            try {
-                const persisted = {
-                    ...state,
-                    recordings: {},
-                    resumeFile: null,
-                };
-                sessionStorage.setItem(SESSION_KEY, JSON.stringify(persisted));
-            } catch { }
-        }
+        if (!hasHydrated.current) return;  // Don't persist initial state before hydration
+        try {
+            const persisted = {
+                ...state,
+                recordings: {},
+                resumeFile: null,
+            };
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(persisted));
+        } catch { }
     }, [state]);
 
     return (
